@@ -1,0 +1,7 @@
+[project]
+name = "alphamaxzero"
+version = "0.1.0"
+description = "An implementation of AlphaZero using the Modular Max APIs"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []

@@ -1,5 +1,5 @@
 def main():
-    print("Hello from alphamaxzero!")
+    print("Hello from alpha-max-zero!")
 
 
 if __name__ == "__main__":

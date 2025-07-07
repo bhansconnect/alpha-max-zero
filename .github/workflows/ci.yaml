@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+# Do not add permissions here! Configure them at the job level!
+permissions: {}
+
+jobs:
+  check-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: update uv.lock
+        run: uv lock
+
+      - name: check uv.lock unchanged
+        run: |
+          git diff --exit-code uv.lock || {
+            echo ""
+            echo ""
+            echo "OOPS! It looks like uv.lock has changed.";
+            echo "Please run 'uv lock' locally, review the updates, and commit the changes.";
+            echo "Here’s what changed:";
+            echo ""
+            git diff uv.lock;
+            exit 1;
+          }
+
+      - name: lint python
+        run: uv run ruff check .
+
+      - name: format python
+        run: uv run ruff format --check .
+
+      - name: type check python
+        run: uv run pyright .
+
+      - name: run pytest
+        run: uv run pytest -v

@@ -1,7 +1,31 @@
 [project]
-name = "alphamaxzero"
+name = "alpha-max-zero"
 version = "0.1.0"
 description = "An implementation of AlphaZero using the Modular Max APIs"
 readme = "README.md"
+authors = [
+    { name = "Brendan Hansknecht", email = "brendan.hansknecht@gmail.com" }
+]
 requires-python = ">=3.10"
 dependencies = []
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pyright>=1.1.402",
+    "pytest>=8.4.1",
+    "ruff>=0.12.2",
+]
+
+[project.scripts]
+alpha-max-zero = "alpha_max_zero.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pyright]
+include = ["src", "tests"]
+strict = ["src"]
+venvPath = "."
+venv = ".venv"

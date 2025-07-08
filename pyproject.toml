@@ -7,7 +7,9 @@ authors = [
     { name = "Brendan Hansknecht", email = "brendan.hansknecht@gmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "modular>=25.4.0",
+]
 
 [dependency-groups]
 dev = [
@@ -30,3 +32,22 @@ include = ["src", "tests"]
 strict = ["src"]
 venvPath = "."
 venv = ".venv"
+ 
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+modular = [
+    { index = "modular-stable" },
+]
+
+# One day, hopefully max will be free of this.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "modular-stable"
+url = "https://modular.gateway.scarf.sh/simple/"
+explicit = true

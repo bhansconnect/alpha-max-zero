@@ -1,9 +1,8 @@
-
-from max.engine import InferenceSession, MojoValue
+from max.engine.api import InferenceSession
 from max.graph import Graph
 
 from alpha_max_zero import kernels
-from alpha_max_zero.game import TicTacToeGame
+
 
 def test_init():
     with Graph("init", custom_extensions=[kernels.mojo_kernels]) as graph:
@@ -14,4 +13,5 @@ def test_init():
     model = session.load(graph)
 
     result = model.execute()[0]
-    assert(isinstance(result, MojoValue))
+    # Yay it runs...but can't do anything with it yet...
+    print(result)

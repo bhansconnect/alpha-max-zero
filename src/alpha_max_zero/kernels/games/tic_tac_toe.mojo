@@ -16,7 +16,7 @@ struct TicTacToeGame(GameT):
     The second 9 reresent if a square contains an X.
     """
 
-    # This should be `out self`, but that fails to format.
+    # This is failing mojo format for some reason...
     fn __init__(out self):
         self.board = 0
 

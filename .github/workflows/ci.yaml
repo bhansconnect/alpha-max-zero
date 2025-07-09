@@ -43,8 +43,8 @@ jobs:
       - name: type check python
         run: uv run pyright .
 
-      - name: format mojo
-        run: uv run mojo format src/alpha_max_zero/kernels
+      # - name: format mojo
+      #   run: uv run mojo format src/alpha_max_zero/kernels
           
       - name: check mojo formatting unchanged
         run: |

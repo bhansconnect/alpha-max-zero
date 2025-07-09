@@ -44,7 +44,7 @@ jobs:
         run: uv run pyright .
 
       - name: format mojo
-        run: mojo format src/alpha_max_zero/kernels
+        run: uv run mojo format src/alpha_max_zero/kernels
           
       - name: check mojo formatting unchanged
         run: |
@@ -52,7 +52,7 @@ jobs:
             echo ""
             echo ""
             echo "OOPS! It looks like uv.lock has changed.";
-            echo "Please run 'mojo format src/alpha_max_zero/kernels' locally, review the updates, and commit the changes.";
+            echo "Please run 'uv run mojo format src/alpha_max_zero/kernels' locally, review the updates, and commit the changes.";
             echo "Here’s what changed:";
             echo ""
             git diff src/alpha_max_zero/kernels;

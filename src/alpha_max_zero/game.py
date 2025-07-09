@@ -7,8 +7,8 @@ The game implementations are in src/alpha_max_zero/games/...
 """
 
 from max.graph import (
-    _OpaqueType,
-    _OpaqueValue,
+    _OpaqueType,  # pyright: ignore[reportPrivateUsage]
+    _OpaqueValue,  # pyright: ignore[reportPrivateUsage]
 )
 
 

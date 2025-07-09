@@ -29,9 +29,13 @@ build-backend = "hatchling.build"
 
 [tool.pyright]
 include = ["src", "tests"]
-strict = ["src"]
 venvPath = "."
 venv = ".venv"
+typeCheckingMode = "strict"
+# These seem to work poorly with modular's library.
+# They hit many errors on inputs and function calls.
+reportMissingTypeStubs = "none"
+reportUnknownMemberType = "none"
  
 [tool.uv.sources]
 torch = [
@@ -40,7 +44,10 @@ torch = [
 modular = [
     { index = "modular-stable" },
 ]
-
+max = [
+    { index = "modular-stable" },
+]
+ 
 # One day, hopefully max will be free of this.
 [[tool.uv.index]]
 name = "pytorch-cpu"
@@ -50,4 +57,9 @@ explicit = true
 [[tool.uv.index]]
 name = "modular-stable"
 url = "https://modular.gateway.scarf.sh/simple/"
+explicit = true
+
+[[tool.uv.index]]
+name = "modular-nightly"
+url = "https://dl.modular.com/public/nightly/python/simple/"
 explicit = true

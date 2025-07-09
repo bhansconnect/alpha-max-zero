@@ -48,3 +48,20 @@ Type of "custom" is "(name: str, device: DeviceRef, values: Sequence[Value[Unkno
 For this project opaque types are needed.
 They are still labeled as private, so pyright complains about them.
 I feel like at this point they should be official even if we eventually want to deprecate them.
+
+### Custom Op scalar return
+
+Apparently it is not possible to just return a scalar directly from a custom op.
+Not sure the correct way to handle this. Is returning a tensor required.
+
+### Private Import Usage
+
+Some rexeported types are not exported publically. As such pyright complains if I import them.
+For example `from max.engine import InferenceSession` and `from max.engine import MojoValue` both complain.
+
+## UX
+
+### Build time
+
+Even a super basic custom op has a very slow build time.
+As such, tiny little tests lead to waiting quite a while.

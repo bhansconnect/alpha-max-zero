@@ -125,6 +125,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "modular" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -137,6 +138,7 @@ requires-dist = [{ name = "modular", specifier = ">=25.4.0", index = "https://mo
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "modular", specifier = ">=25.4.0", index = "https://modular.gateway.scarf.sh/simple" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pyright", specifier = ">=1.1.402" },
     { name = "pytest", specifier = ">=8.4.1" },

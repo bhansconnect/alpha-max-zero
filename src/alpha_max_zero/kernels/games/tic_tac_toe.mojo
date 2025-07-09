@@ -17,7 +17,7 @@ struct TicTacToeGame(GameT):
     """
 
     # This should be `out self`, but that fails to format.
-    fn __init__(inout self):
+    fn __init__(out self):
         self.board = 0
 
 

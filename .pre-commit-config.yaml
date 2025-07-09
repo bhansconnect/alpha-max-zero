@@ -14,14 +14,14 @@ repos:
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
-  - repo: local
-    hooks:
-      - id: mojo-format
-        name: mojo-format
-        entry: mojo format
-        language: system
-        files: '\.(mojo|🔥)$'
-        stages: [pre-commit]
+  # - repo: local
+  #   hooks:
+  #     - id: mojo-format
+  #       name: mojo-format
+  #       entry: mojo format
+  #       language: system
+  #       files: '\.(mojo|🔥)$'
+  #       stages: [pre-commit]
   - repo: https://github.com/RobertCraigie/pyright-python
     rev: v1.1.402
     hooks:

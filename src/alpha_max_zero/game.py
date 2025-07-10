@@ -11,7 +11,6 @@ from max.graph import (
     _OpaqueType,  # pyright: ignore[reportPrivateUsage]
     _OpaqueValue,  # pyright: ignore[reportPrivateUsage]
     DeviceRef,
-    Dim,
     ops,
     TensorType,
     TensorValue,
@@ -45,7 +44,7 @@ class Game:
 
     def current_player(self) -> TensorValue:
         """Get the current player (0 or 1)."""
-        return ops.custom(
+        return ops.inplace_custom(
             name=f"alpha_max_zero.games.{self._name}.current_player",
             device=DeviceRef.CPU(),
             values=[self.value],
@@ -54,18 +53,20 @@ class Game:
             ],
         )[0].tensor
 
-    def play_action(self, action: TensorValue) -> None:
+    def play_action(self, action: TensorValue | int) -> None:
         """Play an action and update the game state."""
-        self.value = ops.custom(
+        if isinstance(action, int):
+            action = ops.constant(action, DType.uint32, DeviceRef.CPU())
+
+        ops.inplace_custom(
             name=f"alpha_max_zero.games.{self._name}.play_action",
             device=DeviceRef.CPU(),
             values=[self.value, action],
-            out_types=[self._type],
-        )[0].opaque
+        )
 
     def valid_actions(self) -> TensorValue:
         """Get a boolean tensor indicating which actions are valid."""
-        return ops.custom(
+        return ops.inplace_custom(
             name=f"alpha_max_zero.games.{self._name}.valid_actions",
             device=DeviceRef.CPU(),
             values=[self.value],
@@ -74,27 +75,20 @@ class Game:
             ],
         )[0].tensor
 
-    def is_terminal(self) -> tuple[TensorValue, TensorValue]:
+    def is_terminal(self) -> TensorValue:
         """Check if the game has ended.
 
         Returns:
-            - First TensorValue: boolean indicating if game is over
-            - Second TensorValue: tensor [player0_won, player1_won, ..., is_tie]
+            - TensorValue: tensor [player0_won, player1_won, is_tie]
         """
-        result = ops.custom(
+        return ops.inplace_custom(
             name=f"alpha_max_zero.games.{self._name}.is_terminal",
             device=DeviceRef.CPU(),
             values=[self.value],
             out_types=[
-                TensorType(dtype=DType.bool, shape=(), device=DeviceRef.CPU()),
-                TensorType(
-                    dtype=DType.bool,
-                    shape=(Dim("num_players") + 1,),
-                    device=DeviceRef.CPU(),
-                ),
+                TensorType(dtype=DType.bool, shape=(3,), device=DeviceRef.CPU()),
             ],
-        )
-        return result[0].tensor, result[1].tensor
+        )[0].tensor
 
 
 class TicTacToeGame(Game):

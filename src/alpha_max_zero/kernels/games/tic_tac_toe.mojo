@@ -62,13 +62,13 @@ struct TicTacToeGame(GameT):
         self.board |= position
         self.board ^= 1 << 18
 
-    fn is_terminal(self, output: OutputTensor[dtype=DType.bool, rank=1]) -> Bool:
+    fn is_terminal(self, results: OutputTensor[dtype=DType.bool, rank=1]):
         """Check if the game has ended using pure bitwise operations.
         
-        Returns:
-            - Bool: True if game is over, False otherwise
-            - output[0 to num_players-1]: True if player N won
-            - output[num_players]: True if game was a tie.
+        Outputs:
+            - win_status[0 to num_players-1]: True if player N won
+            - win_status[num_players]: True if game was a tie.
+            - all False means the game is not over.
         """
         alias win_patterns = [
             0b111_000_000,  # Top row
@@ -110,11 +110,9 @@ struct TicTacToeGame(GameT):
         # Tie if board is full and no one won
         is_tie = all_filled & (~player0_wins) & (~player1_wins)
         
-        output[0] = Scalar[DType.bool](player0_wins)
-        output[1] = Scalar[DType.bool](player1_wins)
-        output[2] = Scalar[DType.bool](is_tie)
-        
-        return player0_wins | player1_wins | all_filled
+        results[0] = Scalar[DType.bool](player0_wins)
+        results[1] = Scalar[DType.bool](player1_wins)
+        results[2] = Scalar[DType.bool](is_tie)
 
 
 # Of note, it is likely that most of these will see limited use in python.
@@ -146,16 +144,12 @@ struct PlayAction:
 struct ValidActions:
     @always_inline
     @staticmethod
-    fn execute(output: OutputTensor[dtype=DType.bool, rank=1], game: TicTacToeGame):
+    fn execute(output: OutputTensor[dtype=DType.bool, rank=1], mut game: TicTacToeGame):
         game.valid_actions(output)
 
 @compiler.register("alpha_max_zero.games.tic_tac_toe.is_terminal")
 struct IsTerminal:
     @always_inline
     @staticmethod
-    fn execute(game: TicTacToeGame, output: OutputTensor[dtype=DType.bool, rank=1]) -> Scalar[DType.bool]:
-        return game.is_terminal(output)
-    
-    @staticmethod
-    fn shape(game: InputTensor[dtype=DType.invalid, rank=0]) -> IndexList[1]:
-        return IndexList[1](TicTacToeGame.num_players + 1)
+    fn execute(results: OutputTensor[dtype=DType.bool, rank=1], mut game: TicTacToeGame):
+        game.is_terminal(results)

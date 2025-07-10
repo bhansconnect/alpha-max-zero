@@ -22,13 +22,13 @@ trait GameT(Defaultable, Copyable, Movable):
         """Play an action and update the game state."""
         ...
 
-    fn is_terminal(self, output: OutputTensor[dtype=DType.bool, rank=1]) -> Bool:
+    fn is_terminal(self, results: OutputTensor[dtype=DType.bool, rank=1]):
         """Check if the game has ended.
         
-        Returns:
-            - Bool: True if game is over, False otherwise
-            - output[0 to num_players-1]: True if player N won
-            - output[num_players]: True if game was a tie.
+        Outputs:
+            - win_status[0 to num_players-1]: True if player N won
+            - win_status[num_players]: True if game was a tie.
+            - all False means the game is not over.
         """
         ...
 

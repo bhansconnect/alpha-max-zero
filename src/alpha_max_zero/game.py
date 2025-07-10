@@ -6,6 +6,8 @@ Python wrapper types for Max Graph OpaqueValue games.
 The game implementations are in src/alpha_max_zero/games/...
 """
 
+from abc import ABC, abstractmethod
+
 from max.dtype import DType
 from max.graph import (
     _OpaqueType,  # pyright: ignore[reportPrivateUsage]
@@ -17,35 +19,51 @@ from max.graph import (
 )
 
 
-class Game:
+class Game(ABC):
     """Base class for all games managed in the graph.
 
     Outside the graph, games would be MojoValues instead.
     """
 
-    _name: str
-    """Name used for calling custom ops."""
-
-    _type: _OpaqueType
-    """The OpaqueType representing this game for custom ops."""
-
     value: _OpaqueValue
     """The OpaqueValue representing the current game in graph."""
 
-    def __init__(self, name: str, type: _OpaqueType) -> None:
-        self._name = name
-        self._type = type
+    @staticmethod
+    @abstractmethod
+    def custom_op_name() -> str:
+        """Returns the name used by this class for custom ops"""
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def opaque_type() -> _OpaqueType:
+        """Returns the OpaqueType for the current game in graph."""
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def num_players() -> int:
+        """Returns the number of players."""
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def num_actions() -> int:
+        """Returns the number of actions possible in the game."""
+        ...
+
+    def __init__(self) -> None:
         self.value = ops.custom(
-            name=f"alpha_max_zero.games.{self._name}.init",
-            device=DeviceRef.CPU(),  # TODO: does id matter? Is it core?
+            name=f"alpha_max_zero.games.{self.custom_op_name()}.init",
+            device=DeviceRef.CPU(),
             values=[],
-            out_types=[self._type],
+            out_types=[self.opaque_type()],
         )[0].opaque
 
     def current_player(self) -> TensorValue:
-        """Get the current player (0 or 1)."""
+        """Get the current player."""
         return ops.inplace_custom(
-            name=f"alpha_max_zero.games.{self._name}.current_player",
+            name=f"alpha_max_zero.games.{self.custom_op_name()}.current_player",
             device=DeviceRef.CPU(),
             values=[self.value],
             out_types=[
@@ -59,7 +77,7 @@ class Game:
             action = ops.constant(action, DType.uint32, DeviceRef.CPU())
 
         ops.inplace_custom(
-            name=f"alpha_max_zero.games.{self._name}.play_action",
+            name=f"alpha_max_zero.games.{self.custom_op_name()}.play_action",
             device=DeviceRef.CPU(),
             values=[self.value, action],
         )
@@ -67,11 +85,15 @@ class Game:
     def valid_actions(self) -> TensorValue:
         """Get a boolean tensor indicating which actions are valid."""
         return ops.inplace_custom(
-            name=f"alpha_max_zero.games.{self._name}.valid_actions",
+            name=f"alpha_max_zero.games.{self.custom_op_name()}.valid_actions",
             device=DeviceRef.CPU(),
             values=[self.value],
             out_types=[
-                TensorType(dtype=DType.bool, shape=(9,), device=DeviceRef.CPU())
+                TensorType(
+                    dtype=DType.bool,
+                    shape=(self.num_actions(),),
+                    device=DeviceRef.CPU(),
+                )
             ],
         )[0].tensor
 
@@ -79,14 +101,19 @@ class Game:
         """Check if the game has ended.
 
         Returns:
-            - TensorValue: tensor [player0_won, player1_won, is_tie]
+            - First TensorValue: boolean indicating if game is over
+            - Second TensorValue: tensor [player0_won, player1_won, ..., is_tie]
         """
         return ops.inplace_custom(
-            name=f"alpha_max_zero.games.{self._name}.is_terminal",
+            name=f"alpha_max_zero.games.{self.custom_op_name()}.is_terminal",
             device=DeviceRef.CPU(),
             values=[self.value],
             out_types=[
-                TensorType(dtype=DType.bool, shape=(3,), device=DeviceRef.CPU()),
+                TensorType(
+                    dtype=DType.bool,
+                    shape=(self.num_players() + 1,),
+                    device=DeviceRef.CPU(),
+                ),
             ],
         )[0].tensor
 
@@ -94,5 +121,18 @@ class Game:
 class TicTacToeGame(Game):
     """Tic tac toe game graph value."""
 
-    def __init__(self) -> None:
-        super().__init__("tic_tac_toe", _OpaqueType("TicTacToeGame"))
+    @staticmethod
+    def custom_op_name() -> str:
+        return "tic_tac_toe"
+
+    @staticmethod
+    def opaque_type() -> _OpaqueType:
+        return _OpaqueType("TicTacToeGame")
+
+    @staticmethod
+    def num_players() -> int:
+        return 2
+
+    @staticmethod
+    def num_actions() -> int:
+        return 9

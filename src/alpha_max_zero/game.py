@@ -6,11 +6,15 @@ Python wrapper types for Max Graph OpaqueValue games.
 The game implementations are in src/alpha_max_zero/games/...
 """
 
+from max.dtype import DType
 from max.graph import (
     _OpaqueType,  # pyright: ignore[reportPrivateUsage]
     _OpaqueValue,  # pyright: ignore[reportPrivateUsage]
     DeviceRef,
+    Dim,
     ops,
+    TensorType,
+    TensorValue,
 )
 
 
@@ -38,6 +42,59 @@ class Game:
             values=[],
             out_types=[self._type],
         )[0].opaque
+
+    def current_player(self) -> TensorValue:
+        """Get the current player (0 or 1)."""
+        return ops.custom(
+            name=f"alpha_max_zero.games.{self._name}.current_player",
+            device=DeviceRef.CPU(),
+            values=[self.value],
+            out_types=[
+                TensorType(dtype=DType.uint32, shape=(), device=DeviceRef.CPU())
+            ],
+        )[0].tensor
+
+    def play_action(self, action: TensorValue) -> None:
+        """Play an action and update the game state."""
+        self.value = ops.custom(
+            name=f"alpha_max_zero.games.{self._name}.play_action",
+            device=DeviceRef.CPU(),
+            values=[self.value, action],
+            out_types=[self._type],
+        )[0].opaque
+
+    def valid_actions(self) -> TensorValue:
+        """Get a boolean tensor indicating which actions are valid."""
+        return ops.custom(
+            name=f"alpha_max_zero.games.{self._name}.valid_actions",
+            device=DeviceRef.CPU(),
+            values=[self.value],
+            out_types=[
+                TensorType(dtype=DType.bool, shape=(9,), device=DeviceRef.CPU())
+            ],
+        )[0].tensor
+
+    def is_terminal(self) -> tuple[TensorValue, TensorValue]:
+        """Check if the game has ended.
+
+        Returns:
+            - First TensorValue: boolean indicating if game is over
+            - Second TensorValue: tensor [player0_won, player1_won, ..., is_tie]
+        """
+        result = ops.custom(
+            name=f"alpha_max_zero.games.{self._name}.is_terminal",
+            device=DeviceRef.CPU(),
+            values=[self.value],
+            out_types=[
+                TensorType(dtype=DType.bool, shape=(), device=DeviceRef.CPU()),
+                TensorType(
+                    dtype=DType.bool,
+                    shape=(Dim("num_players") + 1,),
+                    device=DeviceRef.CPU(),
+                ),
+            ],
+        )
+        return result[0].tensor, result[1].tensor
 
 
 class TicTacToeGame(Game):

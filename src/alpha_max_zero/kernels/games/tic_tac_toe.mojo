@@ -1,7 +1,8 @@
 """Actual implementation of tic tac toe in mojo.  
 """
 import compiler
-from tensor_internal import OutputTensor
+from tensor_internal import OutputTensor, InputTensor
+from utils.index import IndexList
 
 from .traits import GameT
 
@@ -61,6 +62,63 @@ struct TicTacToeGame(GameT):
         self.board |= position
         self.board ^= 1 << 18
 
+    fn is_terminal(self, output: OutputTensor[dtype=DType.bool, rank=1]) -> Bool:
+        """Check if the game has ended using pure bitwise operations.
+        
+        Returns:
+            - Bool: True if game is over, False otherwise
+            - output[0 to num_players-1]: True if player N won
+            - output[num_players]: True if game was a tie.
+        """
+        alias win_patterns = [
+            0b111_000_000,  # Top row
+            0b000_111_000,  # Middle row
+            0b000_000_111,  # Bottom row
+            0b100_100_100,  # Left column
+            0b010_010_010,  # Middle column
+            0b001_001_001,  # Right column
+            0b100_010_001,  # Main diagonal
+            0b001_010_100,  # Anti-diagonal
+        ]
+        
+        player0_board = self.board & 0x1FF
+        player1_board = (self.board >> 9) & 0x1FF
+        
+        var player0_win_bits: UInt32 = 0
+        var player1_win_bits: UInt32 = 0
+        
+        @parameter
+        for i in range(8):
+            pattern = win_patterns[i]
+            
+            # Check pattern match: (board & pattern) == pattern
+            p0_match = ~((player0_board & pattern) ^ pattern)
+            p0_win_bit = UInt32((p0_match & pattern) == pattern)
+            player0_win_bits |= p0_win_bit
+            
+            p1_match = ~((player1_board & pattern) ^ pattern)
+            p1_win_bit = UInt32((p1_match & pattern) == pattern)
+            player1_win_bits |= p1_win_bit
+        
+        player0_wins = player0_win_bits != 0
+        player1_wins = player1_win_bits != 0
+        
+        # Game over if someone won or board is full
+        full_board = player0_board | player1_board
+        all_filled = full_board == 0x1FF
+        
+        # Tie if board is full and no one won
+        is_tie = all_filled & (~player0_wins) & (~player1_wins)
+        
+        output[0] = Scalar[DType.bool](player0_wins)
+        output[1] = Scalar[DType.bool](player1_wins)
+        output[2] = Scalar[DType.bool](is_tie)
+        
+        return player0_wins | player1_wins | all_filled
+
+
+# Of note, it is likely that most of these will see limited use in python.
+# Instead, they will mostly be used directly by the MCTS avoiding python interop.
 
 # TODO: look at making one generic entrypoint that is parameterized on the game.
 @compiler.register("alpha_max_zero.games.tic_tac_toe.init")
@@ -69,3 +127,35 @@ struct Init:
     @staticmethod
     fn execute() -> TicTacToeGame:
         return TicTacToeGame()
+
+@compiler.register("alpha_max_zero.games.tic_tac_toe.current_player")
+struct CurrentPlayer:
+    @always_inline
+    @staticmethod
+    fn execute(game: TicTacToeGame) -> Scalar[DType.uint32]:
+        return game.current_player()
+
+@compiler.register("alpha_max_zero.games.tic_tac_toe.play_action")
+struct PlayAction:
+    @always_inline
+    @staticmethod
+    fn execute(mut game: TicTacToeGame, action: Scalar[DType.uint32]):
+        game.play_action(action)
+
+@compiler.register("alpha_max_zero.games.tic_tac_toe.valid_actions")
+struct ValidActions:
+    @always_inline
+    @staticmethod
+    fn execute(output: OutputTensor[dtype=DType.bool, rank=1], game: TicTacToeGame):
+        game.valid_actions(output)
+
+@compiler.register("alpha_max_zero.games.tic_tac_toe.is_terminal")
+struct IsTerminal:
+    @always_inline
+    @staticmethod
+    fn execute(game: TicTacToeGame, output: OutputTensor[dtype=DType.bool, rank=1]) -> Scalar[DType.bool]:
+        return game.is_terminal(output)
+    
+    @staticmethod
+    fn shape(game: InputTensor[dtype=DType.invalid, rank=0]) -> IndexList[1]:
+        return IndexList[1](TicTacToeGame.num_players + 1)

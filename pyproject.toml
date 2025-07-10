@@ -36,6 +36,7 @@ typeCheckingMode = "strict"
 # They hit many errors on inputs and function calls.
 reportMissingTypeStubs = "none"
 reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
  
 [tool.uv.sources]
 torch = [

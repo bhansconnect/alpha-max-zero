@@ -37,6 +37,7 @@ typeCheckingMode = "strict"
 reportMissingTypeStubs = "none"
 reportUnknownMemberType = "none"
 reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
  
 [tool.uv.sources]
 torch = [

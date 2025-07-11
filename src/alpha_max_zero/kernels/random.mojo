@@ -3,6 +3,7 @@
 Based on the minimal C implementation from https://www.pcg-random.org/
 """
 import compiler
+from memory import bitcast
 from runtime.asyncrt import DeviceContextPtr
 from tensor_internal import OutputTensor, foreach
 from utils.index import IndexList
@@ -66,10 +67,13 @@ struct PCGState:
     fn next_float32(mut self) -> Float32:
         """Generate a random float32 in the range [0, 1).
         """
-        # TODO: double check this against the PCG implementation and makes sure it is robust.
-        # Convert uint32 to float32 in [0, 1)
-        # Multiply by 2^-32
-        return Float32(self._next_uint32()) * Float32(2.3283064365386963e-10)
+        var rand_bits = self._next_uint32()
+        
+        # This gives us uniform distribution in [1, 2) (random lower bits with correct binary scale)
+        rand_bits = (rand_bits >> 9) | 0x3F800000
+        
+        # Bit cast to float and subtract 1
+        return bitcast[DType.float32](rand_bits) - 1.0
     
     fn generate_float32[rank: Int](mut self, output: OutputTensor[dtype=DType.float32, rank=rank]) raises:
         """Fill a tensor with random float32 values in [0, 1).

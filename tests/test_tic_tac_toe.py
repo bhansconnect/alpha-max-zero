@@ -1,29 +1,30 @@
 import numpy as np
-from max.engine import InferenceSession  # pyright: ignore[reportPrivateImportUsage]
 from max.graph import Graph
+from max.driver import Tensor
 
 from alpha_max_zero import kernels, game
 
 
-def test_init():
+def test_init(inference_session):
     with Graph("init", custom_extensions=[kernels.mojo_kernels]) as graph:
         g = game.TicTacToeGame()
         va = g.valid_actions()
         res = g.is_terminal()
         graph.output(va, res)
 
-    session = InferenceSession(devices=[kernels.inference_device])
-    model = session.load(graph)
+    model = inference_session.load(graph)
 
     results = model.execute()
-    valid_actions = results[0].to_numpy()  # pyright: ignore[reportAttributeAccessIssue]
-    scores = results[1].to_numpy()  # pyright: ignore[reportAttributeAccessIssue]
+    assert isinstance(results[0], Tensor)
+    assert isinstance(results[1], Tensor)
+    valid_actions = results[0].to_numpy()
+    scores = results[1].to_numpy()
 
     assert all(valid_actions), "All actions should be valid initially"  # pyright: ignore[reportUnknownArgumentType]
     assert not any(scores), "The game should have no results initially"  # pyright: ignore[reportUnknownArgumentType]
 
 
-def test_winning_game():
+def test_winning_game(inference_session):
     """Test a complete game that results in a win and validate is_terminal."""
 
     with Graph("winning_game", custom_extensions=[kernels.mojo_kernels]) as graph:
@@ -35,9 +36,10 @@ def test_winning_game():
         g.play_action(2)
         graph.output(g.is_terminal())
 
-    session = InferenceSession(devices=[kernels.inference_device])
-    model = session.load(graph)
+    model = inference_session.load(graph)
 
-    results = model.execute()[0].to_numpy()  # pyright: ignore[reportAttributeAccessIssue]
+    result = model.execute()[0]
+    assert isinstance(result, Tensor)
+    results = result.to_numpy()
 
     np.testing.assert_array_equal(results, [True, False, False])  # pyright: ignore[reportUnknownArgumentType]

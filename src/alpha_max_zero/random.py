@@ -4,6 +4,8 @@ This module provides a high-level interface to the PCG (Permuted Congruential Ge
 random number generator implemented in Mojo as a MAX Graph custom op.
 """
 
+from typing import Union
+
 from max.dtype import DType
 from max.graph import (
     _OpaqueType,  # pyright: ignore[reportPrivateUsage]
@@ -38,21 +40,37 @@ class PCGRandom:
     value: _OpaqueValue
     """The OpaqueValue representing the PCG state in the graph."""
 
-    def __init__(self, seed: int = 0, stream: int = 1):
+    def __init__(
+        self, seed: Union[int, TensorValue] = 0, stream: Union[int, TensorValue] = 1
+    ):
         """Initialize a new PCG random number generator.
 
         Args:
-            seed: Initial seed value. Default is 0.
-            stream: Stream number for independent random sequences. Default is 1.
-                    Each stream produces a different, independent sequence of random numbers.
+            seed: Initial seed value. Can be int or TensorValue with dtype uint64 and scalar shape.
+            stream: Stream number for independent random sequences. Can be int or TensorValue
+                   with dtype uint64 and scalar shape. Each stream produces a different,
+                   independent sequence of random numbers.
         """
+        if isinstance(seed, int):
+            seed = ops.constant(seed, DType.uint64, DeviceRef.CPU())
+
+        if seed.dtype != DType.uint64:
+            raise ValueError(f"seed must be uint64, got {seed.dtype}")
+        if len(seed.shape) != 0:
+            raise ValueError(f"seed must be scalar, got shape {seed.shape}")
+
+        if isinstance(stream, int):
+            stream = ops.constant(stream, DType.uint64, DeviceRef.CPU())
+
+        if stream.dtype != DType.uint64:
+            raise ValueError(f"stream must be uint64, got {stream.dtype}")
+        if len(stream.shape) != 0:
+            raise ValueError(f"stream must be scalar, got shape {stream.shape}")
+
         self.value = ops.custom(
             name="alpha_max_zero.random.pcg.init",
             device=DeviceRef.CPU(),
-            values=[
-                ops.constant(seed, DType.uint64, DeviceRef.CPU()),
-                ops.constant(stream, DType.uint64, DeviceRef.CPU()),
-            ],
+            values=[seed, stream],
             out_types=[_OpaqueType("PCGState")],
         )[0].opaque
 

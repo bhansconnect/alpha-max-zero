@@ -60,4 +60,4 @@ jobs:
           }
       
       - name: run pytest
-        run: uv run pytest -v
+        run: uv run pytest -n auto -v

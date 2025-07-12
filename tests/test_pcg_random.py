@@ -16,8 +16,8 @@ from alpha_max_zero.random import PCGRandom
 
 # This uses the global inference_session to enable it to be a modlue scope fixture.
 # This leads to more caching and saves execution time.
-@pytest.fixture()
-def random_graph(cpu_inference_session):
+@pytest.fixture(scope="module")
+def random_graph(inference_session):
     seed_type = TensorType(dtype=DType.uint64, shape=(), device=DeviceRef.CPU())
     stream_type = TensorType(dtype=DType.uint64, shape=(), device=DeviceRef.CPU())
 
@@ -32,7 +32,7 @@ def random_graph(cpu_inference_session):
         values = rng.uniform(shape=(10,))
         graph.output(values)
 
-    return cpu_inference_session.load(graph)
+    return inference_session.load(graph)
 
 
 def test_pcg_functionality(random_graph):

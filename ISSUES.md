@@ -65,3 +65,6 @@ For example `from max.engine import InferenceSession` and `from max.engine impor
 
 Even a super basic custom op has a very slow build time.
 As such, tiny little tests lead to waiting quite a while.
+Even follow up runs that should be cached are quite slow.
+16s for like 8 super simple tests on second theoretically cached run.
+After clearing the cache, the tests take 63 seconds instead...it is so horribly slow.

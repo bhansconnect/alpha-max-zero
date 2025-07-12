@@ -5,14 +5,14 @@ from max.driver import Tensor
 from alpha_max_zero import kernels, game
 
 
-def test_init(inference_session):
+def test_init(cpu_inference_session):
     with Graph("init", custom_extensions=[kernels.mojo_kernels]) as graph:
         g = game.TicTacToeGame()
         va = g.valid_actions()
         res = g.is_terminal()
         graph.output(va, res)
 
-    model = inference_session.load(graph)
+    model = cpu_inference_session.load(graph)
 
     results = model.execute()
     assert isinstance(results[0], Tensor)
@@ -24,7 +24,7 @@ def test_init(inference_session):
     assert not any(scores), "The game should have no results initially"  # pyright: ignore[reportUnknownArgumentType]
 
 
-def test_winning_game(inference_session):
+def test_winning_game(cpu_inference_session):
     """Test a complete game that results in a win and validate is_terminal."""
 
     with Graph("winning_game", custom_extensions=[kernels.mojo_kernels]) as graph:
@@ -36,7 +36,7 @@ def test_winning_game(inference_session):
         g.play_action(2)
         graph.output(g.is_terminal())
 
-    model = inference_session.load(graph)
+    model = cpu_inference_session.load(graph)
 
     result = model.execute()[0]
     assert isinstance(result, Tensor)

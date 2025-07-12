@@ -14,8 +14,10 @@ from alpha_max_zero import kernels
 from alpha_max_zero.random import PCGRandom
 
 
-@pytest.fixture
-def random_graph(inference_session):
+# This uses the global inference_session to enable it to be a modlue scope fixture.
+# This leads to more caching and saves execution time.
+@pytest.fixture()
+def random_graph(cpu_inference_session):
     seed_type = TensorType(dtype=DType.uint64, shape=(), device=DeviceRef.CPU())
     stream_type = TensorType(dtype=DType.uint64, shape=(), device=DeviceRef.CPU())
 
@@ -30,7 +32,7 @@ def random_graph(inference_session):
         values = rng.uniform(shape=(10,))
         graph.output(values)
 
-    return inference_session.load(graph)
+    return cpu_inference_session.load(graph)
 
 
 def test_pcg_functionality(random_graph):
@@ -103,7 +105,7 @@ def test_pcg_different_streams(random_graph):
     )
 
 
-def test_pcg_reseeding(inference_session):
+def test_pcg_reseeding(cpu_inference_session):
     """Test re-seeding functionality."""
     initial_seed = 100
     new_seed = 200
@@ -122,7 +124,7 @@ def test_pcg_reseeding(inference_session):
 
         graph.output(values1, values2)
 
-    model = inference_session.load(graph)
+    model = cpu_inference_session.load(graph)
     result1, result2 = model.execute()
 
     assert isinstance(result1, Tensor)
@@ -133,7 +135,7 @@ def test_pcg_reseeding(inference_session):
     assert not np.array_equal(arr1, arr2), "Re-seeding should change the sequence"
 
 
-def test_pcg_large_tensors_and_statistics(inference_session):
+def test_pcg_large_tensors_and_statistics(cpu_inference_session):
     """Test generation of large tensors (1000 elements) and statistical properties."""
     # Create a large tensor graph
     seed_type = TensorType(dtype=DType.uint64, shape=(), device=DeviceRef.CPU())
@@ -149,7 +151,7 @@ def test_pcg_large_tensors_and_statistics(inference_session):
         values = rng.uniform(shape=(1000,))
         graph.output(values)
 
-    model = inference_session.load(graph)
+    model = cpu_inference_session.load(graph)
 
     seed_tensor = Tensor.scalar(42, DType.uint64)
     stream_tensor = Tensor.scalar(1, DType.uint64)
@@ -181,7 +183,7 @@ def test_pcg_large_tensors_and_statistics(inference_session):
     assert not np.all(result == result[0]), "Values should not all be identical"
 
 
-def test_pcg_uniform_distribution(inference_session):
+def test_pcg_uniform_distribution(cpu_inference_session):
     """Test uniform distribution helper method."""
     with Graph("pcg_uniform", custom_extensions=[kernels.mojo_kernels]) as graph:
         rng = PCGRandom(seed=42)
@@ -189,7 +191,7 @@ def test_pcg_uniform_distribution(inference_session):
         values = rng.uniform(-5.0, 5.0, (10,))
         graph.output(values)
 
-    model = inference_session.load(graph)
+    model = cpu_inference_session.load(graph)
     result = model.execute()[0]
     assert isinstance(result, Tensor)
     result = result.to_numpy()

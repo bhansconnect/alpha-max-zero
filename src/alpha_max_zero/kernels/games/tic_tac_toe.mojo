@@ -83,12 +83,14 @@ struct TicTacToeGame(GameT):
         
         player0_board = self.board & 0x1FF
         player1_board = (self.board >> 9) & 0x1FF
+        print(player0_board)
+        print(player1_board)
         
         var player0_win_bits: UInt32 = 0
         var player1_win_bits: UInt32 = 0
         
         @parameter
-        for i in range(8):
+        for i in range(len(win_patterns)):
             pattern = win_patterns[i]
             
             # Check pattern match: (board & pattern) == pattern

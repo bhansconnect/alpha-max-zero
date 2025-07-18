@@ -59,6 +59,21 @@ Not sure the correct way to handle this. Is returning a tensor required.
 Some rexeported types are not exported publically. As such pyright complains if I import them.
 For example `from max.engine import InferenceSession` and `from max.engine import MojoValue` both complain.
 
+### Graph inputs break based on ordering
+
+Passing a TensorValue into a graph after a MojoValue seems to lead to weird crashes.
+This was an example graph that was breaking:
+```python
+    with Graph("play_move", input_types=[game.TicTacToeGame.opaque_type(), TensorType(dtype=DType.uint32, shape=(), device=DeviceRef.CPU())], custom_extensions=[kernels.mojo_kernels]) as action_graph:
+        g_raw, action = action_graph.inputs
+        g = game.TicTacToeGame(g_raw)
+        g.play_action(action)
+        action_graph.output(g.valid_actions(), g.is_terminal())
+```
+Led to: `ValueError: DType mismatch: expected invalid at position 1 but got ui32 instead.`
+
+Swapping the order of the input arguements fixed this.
+
 ## UX
 
 ### Build time

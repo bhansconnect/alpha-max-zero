@@ -41,6 +41,7 @@ reportUnknownVariableType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownParameterType = "none"
 reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
  
 [tool.uv.sources]
 torch = [

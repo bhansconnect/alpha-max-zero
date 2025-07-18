@@ -16,6 +16,7 @@ from max.graph import (
     ops,
     TensorType,
     TensorValue,
+    Value,
 )
 
 
@@ -52,13 +53,17 @@ class Game(ABC):
         """Returns the number of actions possible in the game."""
         ...
 
-    def __init__(self) -> None:
-        self.value = ops.custom(
-            name=f"alpha_max_zero.games.{self.custom_op_name()}.init",
-            device=DeviceRef.CPU(),
-            values=[],
-            out_types=[self.opaque_type()],
-        )[0].opaque
+    def __init__(self, opaque_value: Value | None = None) -> None:
+        if opaque_value:
+            assert isinstance(opaque_value, _OpaqueValue)
+            self.value = opaque_value
+        else:
+            self.value = ops.custom(
+                name=f"alpha_max_zero.games.{self.custom_op_name()}.init",
+                device=DeviceRef.CPU(),
+                values=[],
+                out_types=[self.opaque_type()],
+            )[0].opaque
 
     def current_player(self) -> TensorValue:
         """Get the current player."""
@@ -71,10 +76,11 @@ class Game(ABC):
             ],
         )[0].tensor
 
-    def play_action(self, action: TensorValue | int) -> None:
+    def play_action(self, action: Value | int) -> None:
         """Play an action and update the game state."""
         if isinstance(action, int):
             action = ops.constant(action, DType.uint32, DeviceRef.CPU())
+        assert isinstance(action, TensorValue)
 
         ops.inplace_custom(
             name=f"alpha_max_zero.games.{self.custom_op_name()}.play_action",

@@ -91,7 +91,6 @@ def test_game_coordination(cpu_inference_session):
         g.play_action(action)
         action_graph.output(g.valid_actions(), g.is_terminal())
 
-    print(action_graph)
     init = cpu_inference_session.load(init_graph)
     play = cpu_inference_session.load(action_graph)
 

@@ -60,4 +60,6 @@ jobs:
           }
       
       - name: run pytest
-        run: uv run pytest -n auto -v
+        # Parallel pytest seems to break mojo compilation in CI...
+        # run: uv run pytest -n auto -v
+        run: uv run pytest -v

@@ -74,6 +74,17 @@ Led to: `ValueError: DType mismatch: expected invalid at position 1 but got ui32
 
 Swapping the order of the input arguements fixed this.
 
+### Running pytest in parallel with custom ops can break compilation
+
+Title really says it all. Just added `-n auto` to pytest here.
+With a clean cache, this fails with:
+```
+>       self._analysis.verify_custom_op(custom_op)
+E       RuntimeError: failed to load Mojo package: /tmp/.modular/mojo_pkg/mojo_pkg_07117f320caaf244f3433e12935656a7.mojopkg
+E       Mojo Parser Trace:
+E       	unable to load package '/tmp/.modular/mojo_pkg/mojo_pkg_07117f320caaf244f3433e12935656a7.mojopkg'
+```
+
 ## UX
 
 ### Build time

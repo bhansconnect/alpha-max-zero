@@ -7,8 +7,12 @@ from tensor_internal import OutputTensor
 
 trait GameT(Defaultable, Copyable, Movable):
     """The core trait representing game a playable game."""
+    # Limit of 255 players
     alias num_players: UInt8
-    alias num_actions: UInt32
+    # Limit of number of actions to 65,536...
+    # I think this is ok for games I care about.
+    # Cuts memory usage in two for part of the MCTS though.
+    alias num_actions: UInt16
 
     fn valid_actions(self, output: OutputTensor[dtype=DType.bool, rank=1]):
         """Fill output tensor with valid actions for the current game state."""

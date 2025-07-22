@@ -22,6 +22,11 @@ struct MCTS[G: GameT]:
     # Probably should either be per thread or globally shared for this.
     # I think with CAS operations can be lock free with simple bucket updates.
     # Maybe use two different caches to avoid thrashing???
+    # Oh, technically could also use it for node reuse. Any non-root node.
+    # That said, things like the repetition draw rule in chess,
+    # the 25 move draw rule in tak, turn count as network input can all lead to many less hits.
+    # Oh, and there could be a special hash based on only data the neural network sees for max hit rate.
+    # Maybe start with transposition as the base instead of trees..... hmmm....
     var root_game : G
     """The current game of the root node."""
     

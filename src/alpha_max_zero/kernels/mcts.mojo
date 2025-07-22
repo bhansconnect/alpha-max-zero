@@ -10,11 +10,56 @@ struct MCTS[G: GameT]:
     The MCTS needs to be paired with an evaluator like a neural network.
     """
 
+    var active_leaves: List[UInt32]
+    """The current leaves to be processed by the neural network.
+
+    This is just used to avoid reallocating the list over and over again.
+    Instead it is stored here and the capacity is reused.
+    """
+
+    var remaining_sims: UInt32
+    """The number of simulations remaining before needing to pick a node."""
+
+    var remaining_sims_in_phase: UInt32
+    """The number of simulations remaining before needing to halve nodes."""
+
+    var halving_nodes: List[UInt32]
+    """The nodes currently up for consideration in the sequential halving algorithm."""
+
+    var gumbel_noise: List[Float32]
+    """The gumbel noise at the root node for the halving nodes."""
+
     var size: Int
     """The number of nodes in the tree."""
 
     var capacity: Int
     """The max number of nodes that could fit in the allocation."""
+
+    # TODO: could this be removed? I think it simplifies things, but is not required.
+    var parent_index: UnsafePointer[UInt32]
+    """Index of the parent node.
+
+    Root node has self index.
+    """
+
+    var pi_logit: UnsafePointer[Float32]
+    """The logit results of the action played to reach this node.
+
+    Of note, pi_logit is initialized by the parent node.
+    As such, it is always set for nodes.
+    """
+
+    var visit_counts: UnsafePointer[UInt32]
+    """Number of times an action was played to reach a node.
+    
+    If the visit count is zero, none of the below fields have been expanded.
+    If it is greater than zero, the below fields are initilized.
+    """
+
+    # TODO: can this be removed instead of wasting memory?
+    # Probably can be calucated.
+    var played_action: UnsafePointer[UInt16]
+    """The action played to reach a board."""
 
     # TODO: maybe store a CompactedState.
     # For now, we are just gonna try storing all games.
@@ -24,20 +69,6 @@ struct MCTS[G: GameT]:
     # Also, a transposition solution would allow for node sharing.
     var game_states: UnsafePointer[G]
     """Board state at a given node."""
-
-    # TODO: could this be removed? I think it simplifies things, but is not required.
-    var parent_index: UnsafePointer[UInt32]
-    """Index of the parent node.
-
-    Root node has self index.
-    """
-
-    var visit_counts: UnsafePointer[UInt32]
-    """Number of times an action was played to reach a node.
-    
-    If the visit count is zero, none of the below fields have been expanded.
-    If it is greater than zero, the below fields are initilized.
-    """
 
     var children_index: UnsafePointer[UInt32]
     """Index of first child node.
@@ -52,11 +83,6 @@ struct MCTS[G: GameT]:
     # All of the below are attached to the child node memory slot.
     # So Q(S, A) -> This state, child A, q_values result.
 
-    # TODO: can this be removed instead of wasting memory?
-    # Probably can be calucated.
-    var played_action: UnsafePointer[UInt16]
-    """The action played to reach a board."""
-
     alias WLDArray = InlineArray[Float32, Int(G.num_players + 1)]
     """Win-Loss-Draw array
 
@@ -70,13 +96,16 @@ struct MCTS[G: GameT]:
     Value is per player with an extra node for draws.
     """
 
-    var pi_logit: UnsafePointer[Float32]
-    """The logit results of the action played to reach this node."""
-
     fn __init__(out self, owned root_state: Optional[G]= None):
         self.size = 0
         self.capacity = 16
 
+        self.active_leaves = []
+        self.remaining_sims = 0
+        self.remaining_sims_in_phase = 0
+        self.halving_nodes = []
+        self.gumbel_noise = []
+        
         self.game_states = UnsafePointer[G].alloc(self.capacity)
         self.parent_index = UnsafePointer[UInt32].alloc(self.capacity)
         self.visit_counts = UnsafePointer[UInt32].alloc(self.capacity)
@@ -104,6 +133,12 @@ struct MCTS[G: GameT]:
 
     fn reset(mut self, owned root_state: Optional[G]= None):
         """Resets the MCTS state while retaining memory capacity."""
+        self.active_leaves.clear()
+        self.remaining_sims = 0
+        self.remaining_sims_in_phase = 0
+        self.halving_nodes.clear()
+        self.gumbel_noise.clear()
+
         for i in range(self.size):
             (self.game_states + i).destroy_pointee()
 

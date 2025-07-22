@@ -16,20 +16,15 @@ struct MCTS[G: GameT]:
     var capacity: Int
     """The max number of nodes that could fit in the allocation."""
 
-    # TODO: look into a transposition table for:
-    # 1. Fast movement from the root to leaf.
-    # 2. Looking up neural network evals.
-    # Probably should either be per thread or globally shared for this.
-    # I think with CAS operations can be lock free with simple bucket updates.
-    # Maybe use two different caches to avoid thrashing???
-    # Oh, technically could also use it for node reuse. Any non-root node.
-    # That said, things like the repetition draw rule in chess,
-    # the 25 move draw rule in tak, turn count as network input can all lead to many less hits.
-    # Oh, and there could be a special hash based on only data the neural network sees for max hit rate.
-    # Maybe start with transposition as the base instead of trees..... hmmm....
-    var root_game : G
-    """The current game of the root node."""
-    
+    # TODO: maybe store a CompactedState.
+    # For now, we are just gonna try storing all games.
+    # For most games, the states should be small. And this is likely worth it.
+    # Technically might be better to use a transposition table, only store the root, and walk from it.
+    # Other option is to manually recalculate movement (which is very slow in many games).
+    # Also, a transposition solution would allow for node sharing.
+    var game_states: UnsafePointer[G]
+    """Board state at a given node."""
+
     # TODO: could this be removed? I think it simplifies things, but is not required.
     var parent_index: UnsafePointer[UInt32]
     """Index of the parent node.
@@ -82,6 +77,7 @@ struct MCTS[G: GameT]:
         self.size = 0
         self.capacity = 16
 
+        self.game_states = UnsafePointer[G].alloc(self.capacity)
         self.parent_index = UnsafePointer[UInt32].alloc(self.capacity)
         self.visit_counts = UnsafePointer[UInt32].alloc(self.capacity)
         self.children_index = UnsafePointer[UInt32].alloc(self.capacity)
@@ -90,13 +86,14 @@ struct MCTS[G: GameT]:
         self.player_values = UnsafePointer[Self.WLDArray].alloc(self.capacity)
         self.pi_logit = UnsafePointer[Float32].alloc(self.capacity)
 
-        # Default value to avoid uninitialized value complaints, but still share logic with reset.
-        self.root_game = G()
-
         self.reset(root_state)
 
 
     fn __del__(owned self):
+        for i in range(self.size):
+            (self.game_states + i).destroy_pointee()
+
+        self.game_states.free()
         self.parent_index.free()
         self.visit_counts.free()
         self.children_index.free()
@@ -107,11 +104,14 @@ struct MCTS[G: GameT]:
 
     fn reset(mut self, owned root_state: Optional[G]= None):
         """Resets the MCTS state while retaining memory capacity."""
+        for i in range(self.size):
+            (self.game_states + i).destroy_pointee()
+
         self.size = 1
         if root_state:
-            self.root_game = root_state.take()
+            self.game_states[0] = root_state.take()
         else:
-            self.root_game = G()
+            self.game_states[0] = G()
 
         self.parent_index[0] = 0
         self.visit_counts[0] = 0
@@ -122,6 +122,7 @@ struct MCTS[G: GameT]:
                 + (new_size >> 3)          # + 12.5% of new_size
                 + (3 if new_size < 9 else 6)   # +3 for small lists (<9), else +6
 
+        game_states = UnsafePointer[G].alloc(self.capacity)
         parent_index = UnsafePointer[UInt32].alloc(self.capacity)
         visit_counts = UnsafePointer[UInt32].alloc(self.capacity)
         children_index = UnsafePointer[UInt32].alloc(self.capacity)
@@ -130,6 +131,9 @@ struct MCTS[G: GameT]:
         player_values = UnsafePointer[Self.WLDArray].alloc(self.capacity)
         pi_logit = UnsafePointer[Float32].alloc(self.capacity)
 
+        # I think this is safe for game states... this would be a move.
+        # That said, I'm not 100% sure in all cases.
+        memcpy(game_states, self.game_states, self.size)
         memcpy(parent_index, self.parent_index, self.size)
         memcpy(visit_counts, self.visit_counts, self.size)
         memcpy(children_index, self.children_index, self.size)
@@ -138,6 +142,7 @@ struct MCTS[G: GameT]:
         memcpy(player_values, self.player_values, self.size)
         memcpy(pi_logit, self.pi_logit, self.size)
 
+        self.game_states.free()
         self.parent_index.free()
         self.visit_counts.free()
         self.children_index.free()
@@ -146,6 +151,7 @@ struct MCTS[G: GameT]:
         self.player_values.free()
         self.pi_logit.free()
 
+        self.game_states = game_states
         self.parent_index = parent_index
         self.visit_counts = visit_counts
         self.children_index = children_index

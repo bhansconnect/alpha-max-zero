@@ -1,4 +1,5 @@
 from memory import UnsafePointer, memcpy
+from tensor_internal import InputTensor
 
 from .games.traits import GameT
 
@@ -10,18 +11,14 @@ struct MCTS[G: GameT]:
     The MCTS needs to be paired with an evaluator like a neural network.
     """
 
-    var active_leaves: List[UInt32]
-    """The current leaves to be processed by the neural network.
-
-    This is just used to avoid reallocating the list over and over again.
-    Instead it is stored here and the capacity is reused.
-    """
-
-    var remaining_sims: UInt32
-    """The number of simulations remaining before needing to pick a node."""
+    var remaining_sims_after_phase: UInt32
+    """The number of simulations remaining after the current phase and before needing to pick a node."""
 
     var remaining_sims_in_phase: UInt32
     """The number of simulations remaining before needing to halve nodes."""
+
+    var max_actions: UInt16
+    """The max number of actions to sample at the root node in sequential halving."""
 
     var halving_nodes: List[UInt32]
     """The nodes currently up for consideration in the sequential halving algorithm."""
@@ -97,11 +94,11 @@ struct MCTS[G: GameT]:
     """
 
     fn __init__(out self, owned root_state: Optional[G]= None):
+        self.max_actions = 2
         self.size = 0
         self.capacity = 16
 
-        self.active_leaves = []
-        self.remaining_sims = 0
+        self.remaining_sims_after_phase = 0
         self.remaining_sims_in_phase = 0
         self.halving_nodes = []
         self.gumbel_noise = []
@@ -133,8 +130,7 @@ struct MCTS[G: GameT]:
 
     fn reset(mut self, owned root_state: Optional[G]= None):
         """Resets the MCTS state while retaining memory capacity."""
-        self.active_leaves.clear()
-        self.remaining_sims = 0
+        self.remaining_sims_after_phase = 0
         self.remaining_sims_in_phase = 0
         self.halving_nodes.clear()
         self.gumbel_noise.clear()
@@ -194,3 +190,58 @@ struct MCTS[G: GameT]:
         self.played_action = played_action
         self.player_values = player_values
         self.pi_logit = pi_logit
+
+    fn start_search(mut self, sim_count: UInt32, max_actions: UInt16):
+        """This is called ones before each search phase to setup the search config."""
+        self.remaining_sims_after_phase = sim_count
+        self.max_actions = max_actions
+        
+    
+    fn search(mut self) -> List[UInt32]:
+        """Continues a search for which action to play.
+
+        Uses Gumbel MCTS with Sequential halving.
+        Will return a list of nodes to run evaluations for.
+        Returns an empty list if out of searches.
+
+        Update should be called between calls to search with results from the evaluations.
+        """
+        if self.remaining_sims_after_phase == 0 and self.remaining_sims_in_phase == 0:
+            return []
+
+        # Expand root if needed.
+        if self.visit_counts[0] == 0:
+            # Note: root explicitly does not count as a simulation.
+            return [0]
+
+        # Setup next phase with sequential halving if needed.
+        if self.remaining_sims_in_phase == 0:
+            pass
+
+        # Run a search on each node in phase limited by remaining sims in phase.
+        leaves = List[UInt32](capacity = len(self.halving_nodes))
+        to_simulate = self.halving_nodes[:Int(self.remaining_sims_in_phase)]
+        self.remaining_sims_in_phase -= len(to_simulate)
+        for node in to_simulate:
+            # find the leaf and append it to the leaves.
+            pass
+            
+        return leaves
+
+    fn update_node(mut self, node: UInt32, policy: InputTensor[dtype=DType.float32, rank=1], result: Self.WLDArray):
+        """Update the results for a specific node.
+
+        This will lead to expanding the node.
+        For the root node, this will apply gumbel noise.
+        """
+
+        # Get valid actions.
+
+        # Add child nodes for each valid action.
+        
+        # Update action count and propagate value up tree.
+        
+        if node == 0:
+            # Root node: add gumbel noise
+            pass
+

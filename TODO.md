@@ -1,4 +1,4 @@
-Just trying to get a bit more organized as I plan things out.
+just trying to get a bit more organized as I plan things out.
 
 First:
 Implement [gumbel MCTS](https://openreview.net/pdf?id=bERaNdoegnO). This will be used for self paly.
@@ -18,6 +18,53 @@ When implementing this, I want the correct base principles:
 
 Make sure to heavily test this.
 Should be possible to make situations and see results picking the right thing.
+
+----
+
+This is maybe unnecessarily complex, but I want to test making a way more powerful live MCTS.
+As such, I do want to take into account transpositions.
+
+1. each node will store a zobrist hash of the current board (maybe stored directly in the game state?)
+2. mcts will use a lookup for child nodes based on zobrist hash. This is extra indirection, when creating nodes.
+   That said, after looking up the node, mcts can still just reference an exact child index.
+   (maybe use a free list instead of compacting child nodes to beginning of SOA arrays?)
+3. Trajectories will track the zobrist hashes to notice repetitions.
+   If an mcts rollout hits a repetition allow for either the rollout to be consider a draw or making the move illegal.
+4. Games should use incremental zobrist hashes, but we should enable testing against newly computed ones.
+5. We will now store edge counts instead of just node counts.
+   If the edge count is less than a nodes count, skip rollout, just increment edge count and use the node q value (it is a more accurate estimate).
+   If this seems to have issues, just use the MCGS paper node averaging thing instaed.
+6. Allow multiple threads to walk a single mcts tree at once.
+   They will apply a virtual count to the node while descending the tree.
+   This will affect selection of other threads.
+   For the root node, allow parallelism within a single phase.
+   For root, try to distribute evenly across child nodes.
+7. To avoid exploration ruts, in evaluation games with time limits, start with a phase to explore all children nodes (in priority order).
+   Limit this phase to x% of total execution time (10%?).
+   This phase pushes for at least minimal exploration of as many nodes as possible before going into the deep search.
+   Also, use anytime sequential halving for the rest of the execution.
+8. Only for selfplay (and batch eval games?), add a nn eval cache.
+9. For things like the 25 move rule in tak, only crudely track them in NN input/transposition key.
+   Like maybe first 20 moves, do nothing, not 4 set a bit, final one set an extra bit. Then draw.
+   This gives some insight without ruining caching.
+
+Note: since the mcts tracks history, it must alert the game of repetitions.
+This avoids every single stored game needing to waste space tracking history.
+
+
+This should get us:
+1. Multithreading within a single game. (especially important for faster evals)
+2. Transposition based mcts for work sharing.
+3. An nn cache for much faster selfplay.
+
+----
+
+This definitely will be a bit hard to implement in a game generic way.
+It would be much easier to limit this to a specific bespoke game.
+That would be a reasonable downscoping.
+but might just try for generic anyway.
+
+----
 
 
 Next:
